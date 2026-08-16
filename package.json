@@ -1,0 +1,45 @@
+{
+  "name": "white-album-2-save-editor-workspace",
+  "version": "1.0.0",
+  "description": "Save manager for WHITE ALBUM2 PC",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "install:app": "npm --prefix frontend install",
+    "test": "node backend/save-service.test.cjs",
+    "build": "npm --prefix frontend run build",
+    "dist:win": "npm run build && electron-builder --win portable nsis --x64",
+    "dist:portable": "npm run build && electron-builder --win portable --x64",
+    "dev": "npm --prefix frontend run electron:dev",
+    "start": "npm --prefix frontend run electron"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.wa2.saveeditor",
+    "productName": "WHITE ALBUM2 Save Editor",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/save-service.cjs",
+      "backend/resources/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

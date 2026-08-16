@@ -1,0 +1,15 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+release/
+artifacts/
+
+*.log
+*.tmp
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+SESSION_HANDOFF_REPORT.md
+White_Album_2_Save_Editor_Proposal.md
