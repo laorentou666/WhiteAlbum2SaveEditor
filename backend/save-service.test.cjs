@@ -152,6 +152,23 @@ test('rejects a collision unless overwrite is explicit', async () => {
   await assert.rejects(moveSaves(directory, [{ id: saves[0].id, targetSlot: 3 }]), { code: 'DESTINATION_EXISTS' });
 });
 
+test('moves a batch into consecutive slots and backs up overwritten saves', async () => {
+  const directory = await fixture();
+  await fs.writeFile(path.join(directory, 'save_03.sav'), 'occupied target', 'utf8');
+  const saves = await listSaves(directory, { useChinesePatch: false });
+  const sources = saves.filter((save) => save.slot <= 2);
+  const result = await moveSaves(directory, [
+    { id: sources[0].id, targetSlot: 3 },
+    { id: sources[1].id, targetSlot: 4 },
+  ], { backup: true, overwrite: true, useChinesePatch: false });
+
+  assert.deepEqual(result.saves.map((save) => save.slot), [3, 4]);
+  assert.equal(await fs.readFile(path.join(directory, 'save_02.sav'), 'utf8'), '2020-01-02 03:04:05\0IC\0雪菜的存档文本');
+  assert.equal(await fs.readFile(path.join(directory, 'save_03.sav'), 'utf8'), '2021-02-03 04:05:06\0CC\0closing chapter');
+  assert.equal(result.backups.length, 3);
+  assert.equal((await fs.readdir(directory)).filter((name) => name.endsWith('.bak')).length, 3);
+});
+
 test('copies to the next free slot and deletes with a backup', async () => {
   const directory = await fixture();
   const saves = await listSaves(directory);

@@ -1,24 +1,25 @@
 ﻿import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { SaveData } from '../types';
 import { cn } from '../lib/utils';
 import { Clock, MessageSquare, GripVertical } from 'lucide-react';
 
+export type SaveCardDropState = 'available' | 'conflict';
+
 interface SaveCardProps {
   data: SaveData;
   isSelected: boolean;
+  isInDragGroup?: boolean;
+  dropState?: SaveCardDropState;
   onSelect: (id: string, multi: boolean) => void;
   onContextMenu: (e: React.MouseEvent, data: SaveData) => void;
 }
 
-export function SaveCard({ data, isSelected, onSelect, onContextMenu }: SaveCardProps) {
+export function SaveCard({ data, isSelected, isInDragGroup = false, dropState, onSelect, onContextMenu }: SaveCardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
-    transform,
-    transition,
     isDragging,
   } = useSortable({
     id: data.id,
@@ -26,24 +27,20 @@ export function SaveCard({ data, isSelected, onSelect, onContextMenu }: SaveCard
     disabled: { draggable: Boolean(data.empty), droppable: false },
   });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-  };
-
   return (
     <div
       ref={setNodeRef}
-      style={style}
       onClick={(e) => { if (!data.empty) onSelect(data.id, e.ctrlKey || e.metaKey); }}
       onContextMenu={(e) => onContextMenu(e, data)}
       className={cn(
         "save-card group relative flex flex-col rounded-xl overflow-hidden select-none transition-all duration-200",
         data.empty ? "cursor-default" : "cursor-pointer",
         "glass-panel hover:border-blue-500/50 hover:shadow-blue-900/20",
-        isDragging && "opacity-60 scale-105 shadow-2xl",
-        isSelected && "ring-2 ring-blue-500 border-transparent bg-blue-950/40"
+        isInDragGroup && "opacity-35 scale-[0.98]",
+        isDragging && "opacity-20",
+        isSelected && "ring-2 ring-blue-500 border-transparent bg-blue-950/40",
+        dropState === 'available' && "ring-2 ring-emerald-400 border-transparent bg-emerald-950/40 shadow-lg shadow-emerald-950/30",
+        dropState === 'conflict' && "ring-2 ring-amber-400 border-transparent bg-amber-950/40 shadow-lg shadow-amber-950/30"
       )}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-slate-800">

@@ -129,23 +129,6 @@ export default function App() {
     }
   };
 
-  const handleSavesReorder = async (newSaves: SaveData[]) => {
-    const occupied = newSaves.filter((save) => !save.empty);
-    if (!electronAPI || !directory) {
-      setSaves(materializeSlots(occupied));
-      return;
-    }
-    setIsLoading(true);
-    try {
-      applyResult(await electronAPI.reorderSaves(directory, occupied.map((save) => save.id), { backup: true }));
-    } catch (operationError) {
-      setError(apiErrorMessage(operationError));
-      await loadDirectory(directory);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleDelete = async (ids: string[]) => {
     const realIds = ids.filter((id) => saves.some((save) => save.id === id && !save.empty));
     if (realIds.length === 0) return;
@@ -177,19 +160,28 @@ export default function App() {
     }
   };
 
-  const handleMove = async (moves: Array<{ id: string; targetSlot: number }>) => {
+  const handleMove = async (moves: Array<{ id: string; targetSlot: number }>, options: { overwrite?: boolean } = {}) => {
     const realMoves = moves.filter((move) => saves.some((save) => save.id === move.id && !save.empty));
     if (realMoves.length === 0) return;
     if (!electronAPI || !directory) {
       const byId = new Map(realMoves.map((move) => [move.id, move.targetSlot]));
-      setSaves(materializeSlots(saves.filter((save) => !byId.has(save.id)).concat(
-        saves.filter((save) => byId.has(save.id)).map((save) => ({ ...save, slot: byId.get(save.id)! })),
-      )));
+      const targetSlots = new Set(realMoves.map((move) => move.targetSlot));
+      const conflicts = saves.filter((save) => !save.empty && targetSlots.has(save.slot) && !byId.has(save.id));
+      if (conflicts.length > 0 && !options.overwrite) {
+        setError('目标档位已有存档，未执行移动。');
+        return;
+      }
+      const moved = saves
+        .filter((save) => byId.has(save.id))
+        .map((save) => ({ ...save, slot: byId.get(save.id)! }));
+      const retained = saves.filter((save) => !byId.has(save.id) && (save.empty || !targetSlots.has(save.slot)));
+      setSaves(materializeSlots(retained.concat(moved)));
+      setError(null);
       return;
     }
     setIsLoading(true);
     try {
-      applyResult(await electronAPI.moveSaves(directory, realMoves, { backup: true }));
+      applyResult(await electronAPI.moveSaves(directory, realMoves, { backup: true, overwrite: options.overwrite === true }));
     } catch (operationError) {
       setError(apiErrorMessage(operationError));
     } finally {
@@ -260,8 +252,7 @@ export default function App() {
         )}
         <SaveGrid
           saves={saves}
-          onSavesReorder={(value) => void handleSavesReorder(value)}
-          onMove={(moves) => void handleMove(moves)}
+          onMove={handleMove}
           onDelete={(ids) => void handleDelete(ids)}
           onCopy={(ids) => void handleCopy(ids)}
           onMoveToFree={(ids) => void handleMoveToFree(ids)}
